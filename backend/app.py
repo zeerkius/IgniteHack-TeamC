@@ -70,6 +70,44 @@ def get_most_least_producing():
         return jsonify({"most_producing": top_5, "least_producing": bottom_5})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/map-data', methods=['GET'])
+def get_map_data():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        query = """SELECT "State", SUM("Total_Wells") AS total_wells, 
+                          AVG("Total_Wells_Annual_Oil_Production") AS avg_production, 
+                          "Latitude", "Longitude"
+                   FROM well_data 
+                   WHERE "Latitude" IS NOT NULL AND "Longitude" IS NOT NULL 
+                   GROUP BY "State", "Latitude", "Longitude";"""
+        cursor.execute(query)
+        data = cursor.fetchall()
+
+        if not data:
+            return jsonify({"error": "No data found in the database"}), 404  # If no data, return 404
+
+        cursor.close()
+        conn.close()
+        
+        # Convert data into JSON format
+        response_data = []
+        for row in data:
+            response_data.append({
+                "state": row[0],
+                "total_wells": row[1],
+                "avg_production": row[2],
+                "lat": row[3],
+                "lon": row[4]
+            })
+
+        return jsonify(response_data)  # Ensure valid JSON response
+
+    except Exception as e:
+        print("Error in /api/map-data:", str(e))  # Log error
+        return jsonify({"error": str(e)}), 500
+
 
 
 if __name__ == '__main__':

@@ -1,7 +1,12 @@
 document.addEventListener("DOMContentLoaded", function () {
     function fetchData(apiUrl, callback) {
         fetch(apiUrl)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(callback)
             .catch(error => console.error("Error loading data:", error));
     }
@@ -75,6 +80,51 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     });
+
+    // **4️⃣ Interactive Map Implementation (Independent Functionality)**
+    let mapInitialized = false;
+    let map;
+
+    document.getElementById("toggleMapBtn").addEventListener("click", function () {
+        const mapContainer = document.getElementById("mapContainer");
+    
+        // Toggle visibility
+        if (mapContainer.style.visibility === "hidden") {
+            mapContainer.style.visibility = "visible";
+        } else {
+            mapContainer.style.visibility = "hidden";
+            return; // Don't reload the map if hiding
+        }
+    
+        // Initialize map only once
+        if (!mapInitialized) {
+            fetchData("http://127.0.0.1:5000/api/map-data", data => {
+                if (!Array.isArray(data) || data.length === 0) {
+                    console.error("Invalid API response format or empty data:", data);
+                    return;
+                }
+    
+                // Create map instance
+                map = L.map('map').setView([37.8, -96], 4);
+    
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 10,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+    
+                // Add markers for each state
+                data.forEach(state => {
+                    if (!state.lat || !state.lon) {
+                        console.warn(`Missing coordinates for ${state.state}`);
+                        return;
+                    }
+                    const marker = L.marker([state.lat, state.lon]).addTo(map);
+                    marker.bindPopup(`<b>${state.state}</b><br>Total Wells: ${state.total_wells}<br>Avg Barrels/Year: ${state.avg_production}`);
+                });
+    
+                mapInitialized = true;
+            });
+        }
+    });
+    
 });
-
-
