@@ -58,6 +58,54 @@ def predict_oil_production(input_data):
     input_df = pd.DataFrame([input_data], columns=features)
     return model.predict(input_df)[0]
 
+
+import numpy as np
+
+# Identify well-related features and year
+exclude_features = ["Year", "Oil_Wells"]
+
+# Compute median for each feature except the excluded ones
+median_values = df[features].median()
+
+# Create a new instance
+new_instance = [median_values[col] if col not in exclude_features else "?" for col in features]
+
+k = 1
+# Convert to a list
+
+import pickle
+
+# Save the trained model
+with open("model.pkl", "wb") as f:
+    pickle.dump(model, f)
+
+from flask import Flask, request, jsonify
+import pickle
+import pandas as pd
+
+# Load the model
+with open("model.pkl", "rb") as f:
+    model = pickle.load(f)
+
+from flask import Flask, request, jsonify
+import pickle
+import pandas as pd
+
+# Load the model
+with open("model.pkl", "rb") as f:
+    model = pickle.load(f)
+
+app = Flask(__name__)
+
+# Define API endpoint
+@app.route("/predict", methods=["POST"])
+def predict():
+    data = request.get_json()
+    input_df = pd.DataFrame([data["features"]], columns=data["feature_names"])
+    prediction = model.predict(input_df)[0]
+    return jsonify({"prediction": prediction})
+
+
 # ✅ Step 3: Connect to PostgreSQL (Google Cloud SQL)
 db_user = "teamc-admin"
 db_password = "123456"
@@ -105,4 +153,8 @@ with engine.connect() as conn:
 df.to_sql('well_data', con=engine, if_exists='replace', index=False, method='multi')
 
 print("✅ Data successfully inserted into PostgreSQL, and model is ready for API integration.")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
 
